@@ -1,0 +1,30 @@
+[Unit]
+Description=NAVAID API Server
+After=network.target
+
+[Service]
+Type=simple
+User=navaid-api
+Group=navaid-api
+WorkingDirectory=/opt/navaid-api/src
+ExecStart=/opt/navaid-api/venv/bin/python main.py
+
+# Environment
+Environment="NAVAID_DATA_DIR=/var/lib/navaid-api"
+Environment="NAVAID_HOST=0.0.0.0"
+Environment="NAVAID_PORT=8000"
+
+
+# Security
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/
+ReadWritePaths=/var/lib/navaid-api
+
+# Restart policy
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

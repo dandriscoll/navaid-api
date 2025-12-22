@@ -1,6 +1,6 @@
 # NAVAID API Server
 
-A lightweight Python REST API that returns JSON coordinates (latitude/longitude) for FAA NAVAIDs (VORs, NDBs, TACANs, etc.).
+A lightweight Python REST API that returns JSON coordinates (latitude/longitude) for FAA NAVAIDs (VORs, NDBs, TACANs) and fixes (intersections, waypoints).
 
 ## Examples
 
@@ -14,6 +14,19 @@ GET /navaids/SEA
   "type": "VORTAC",
   "latitude": 47.435278,
   "longitude": -122.309722
+}
+```
+
+```
+GET /navaids/BANGR
+```
+```json
+{
+  "identifier": "BANGR",
+  "type": "FIX",
+  "state": "WA",
+  "latitude": 47.462500,
+  "longitude": -122.928611
 }
 ```
 
@@ -32,7 +45,7 @@ GET /navaids/SEA270005
 }
 ```
 
-The second format uses ICAO fix notation: `{NAVAID}{RADIAL:3}{DISTANCE:3}` (e.g., `SEA270005` = SEA radial 270, 5nm).
+The second format uses ICAO fix notation: `{ID}{RADIAL:3}{DISTANCE:3}` (e.g., `SEA270005` = SEA radial 270, 5nm).
 
 ## Architecture Overview
 
@@ -40,7 +53,7 @@ The second format uses ICAO fix notation: `{NAVAID}{RADIAL:3}{DISTANCE:3}` (e.g.
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Internet                                │
 └──────────────────────────────┬──────────────────────────────────┘
-                               │ HTTPS (443)
+                               │ HTTP (80)
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Linux Server                                 │
@@ -51,15 +64,16 @@ The second format uses ICAO fix notation: `{NAVAID}{RADIAL:3}{DISTANCE:3}` (e.g.
 │  │  │  ┌───────────────────────────────────────────────┐  │  │  │
 │  │  │  │         Python (uvicorn + FastAPI)            │  │  │  │
 │  │  │  │                                               │  │  │  │
-│  │  │  │  - Loads NAV.txt on startup                   │  │  │  │
+│  │  │  │  - Loads NAV.txt + FIX.txt on startup         │  │  │  │
 │  │  │  │  - Serves JSON via /navaids/<ID>              │  │  │  │
-│  │  │  │  - TLS via Let's Encrypt certs                │  │  │  │
+
 │  │  │  └───────────────────────────────────────────────┘  │  │  │
 │  │  └─────────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │  /var/lib/navaid-api/NAV.txt   (FAA NASR data)            │  │
+│  │  /var/lib/navaid-api/NAV.txt   (VORs, TACANs, NDBs)       │  │
+│  │  /var/lib/navaid-api/FIX.txt   (intersections, waypoints) │  │
 │  │  /etc/letsencrypt/live/<domain>/   (SSL certs)            │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
@@ -67,20 +81,10 @@ The second format uses ICAO fix notation: `{NAVAID}{RADIAL:3}{DISTANCE:3}` (e.g.
 
 ## Data Source
 
-NAVAID data comes from the FAA's 28-Day NASR Subscription:
-- **URL:** https://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/NASR_Subscription/
-- **Format:** Fixed-width text file (`NAV.txt`) with 805-character records
+Data comes from the FAA's 28-Day NASR Subscription:
+- **URL:** http://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/NASR_Subscription/
+- **Files:** `NAV.txt` (~2,600 NAVAIDs) and `FIX.txt` (~70,000 fixes)
 - **Update Cycle:** Every 28 days
-
-### NAV.txt Record Structure (NAV1 records)
-
-| Field        | Position | Length | Description                     |
-|--------------|----------|--------|---------------------------------|
-| Identifier   | 5        | 4      | NAVAID ID (e.g., "SEA")         |
-| Type         | 9        | 20     | NAVAID type (e.g., "VORTAC")    |
-| Name         | 43       | 30     | Facility name (e.g., "SEATTLE") |
-| Latitude     | 372      | 14     | Format: DD-MM-SS.SSSH           |
-| Longitude    | 397      | 14     | Format: DDD-MM-SS.SSSH          |
 
 ## Project Structure
 
@@ -94,10 +98,11 @@ navaid-api/
 ├── navaid-api.service           # Example systemd unit file
 ├── src/
 │   ├── main.py                  # FastAPI application
-│   ├── parser.py                # NAV.txt parser
+│   ├── parser.py                # NAV.txt/FIX.txt parser
 │   └── config.py                # Configuration
 └── data/
-    └── NAV.txt                  # (downloaded FAA data)
+    ├── NAV.txt                  # (downloaded) VORs, TACANs, NDBs
+    └── FIX.txt                  # (downloaded) Intersections, waypoints
 ```
 
 ## Prerequisites
@@ -131,78 +136,38 @@ Server runs at `http://localhost:8000`
 
 ## Production Setup
 
-Run `./install.sh` for a guided installation, or configure manually:
-
 - **systemd:** Copy `systemd/navaid-api.service` to `/etc/systemd/system/` and adjust paths as needed.
-- **SSL:** Set `NAVAID_SSL_CERT` and `NAVAID_SSL_KEY` in your environment or `.env` file to point to your Let's Encrypt certificates.
+
 - **Data:** Run `./download-nasr.sh` to fetch the latest FAA NASR data.
 
 ## Configuration
 
 Environment variables (set in systemd unit or `.env` file):
 
-| Variable          | Default                      | Description                    |
-|-------------------|------------------------------|--------------------------------|
-| `NAVAID_DATA_PATH`| `/var/lib/navaid-api/NAV.txt`| Path to NAV.txt file           |
-| `NAVAID_HOST`     | `0.0.0.0`                    | Listen address                 |
-| `NAVAID_PORT`     | `443`                        | Listen port                    |
-| `NAVAID_SSL_CERT` | (none)                       | Path to SSL certificate        |
-| `NAVAID_SSL_KEY`  | (none)                       | Path to SSL private key        |
+| Variable          | Default                  | Description                    |
+|-------------------|--------------------------|--------------------------------|
+| `NAVAID_DATA_DIR` | `data`                   | Directory containing NAV.txt and FIX.txt |
+| `NAVAID_HOST`     | `0.0.0.0`                | Listen address                 |
+| `NAVAID_PORT`     | `8000`                   | Listen port                    |
+
 
 ## API Endpoints
 
 ### GET /navaids/{identifier}
 
-Returns NAVAID information by identifier.
-
-**Response:**
-```json
-{
-  "identifier": "SEA",
-  "name": "SEATTLE",
-  "type": "VORTAC",
-  "latitude": 47.435278,
-  "longitude": -122.309722
-}
-```
-
-**Errors:**
-- `404` - NAVAID not found
+Returns NAVAID or fix information by identifier. NAVAIDs are checked first.
 
 ### GET /navaids/{identifier}/{radial}/{distance}
 
-Returns coordinates for a point at a given radial and distance from a NAVAID. Also accepts ICAO fix notation: `/navaids/SEA270005` (3-digit radial + 3-digit distance in nm).
-
-**Response:**
-```json
-{
-  "navaid": "SEA",
-  "radial": 270,
-  "distance_nm": 5,
-  "latitude": 47.435278,
-  "longitude": -122.398611
-}
-```
-
-**Errors:**
-- `404` - NAVAID not found
-- `400` - Invalid radial/distance format
+Returns coordinates for a point at a given radial and distance from a NAVAID or fix. Also accepts ICAO fix notation: `/navaids/SEA270005` (3-digit radial + 3-digit distance in nm).
 
 ### GET /health
 
-Health check endpoint.
+Returns `{"status": "ok", "navaid_count": N, "fix_count": N}`
 
-**Response:**
-```json
-{
-  "status": "ok",
-  "navaid_count": 3421
-}
-```
 
-## SSL & Data Updates
 
-- **Certificate renewal:** Add a hook at `/etc/letsencrypt/renewal-hooks/post/navaid-api-restart.sh` to restart the service after certbot renews.
+
 - **Data updates:** FAA NASR data updates every 28 days. Run `./update-data.sh` via cron to keep data current.
 
 ## Troubleshooting
@@ -210,8 +175,8 @@ Health check endpoint.
 Check logs with `sudo journalctl -u navaid-api -f`. Common issues:
 
 - **NAV.txt not found:** Run `./download-nasr.sh`
-- **SSL permission denied:** Ensure the service user can read `/etc/letsencrypt/live/your-domain/`
-- **Port 443 in use:** Check for conflicting services
+
+
 
 ## License
 
