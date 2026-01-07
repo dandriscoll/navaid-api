@@ -90,12 +90,12 @@ Data comes from the FAA's 28-Day NASR Subscription:
 ```
 navaid-api/
 ├── README.md
-├── requirements.txt
+├── pyproject.toml               # Package configuration
 ├── download-nasr.sh             # Download latest FAA data
-├── install.sh                   # Production installation
 ├── update-data.sh               # Data update (for cron)
 ├── navaid-api.service           # Example systemd unit file
-├── src/
+├── navaid_api/
+│   ├── __init__.py
 │   ├── main.py                  # FastAPI application
 │   ├── parser.py                # NAV.txt/FIX.txt parser
 │   └── config.py                # Configuration
@@ -110,6 +110,16 @@ navaid-api/
 - Linux server with systemd
 - Root/sudo access
 
+## Installation
+
+```bash
+# Install from GitHub
+pip install git+https://github.com/YOURUSER/navaid-api.git
+
+# Or install locally for development
+pip install -e .
+```
+
 ## Quick Start (Development)
 
 ```bash
@@ -120,14 +130,14 @@ cd navaid-api
 python3 -m venv venv
 source venv/bin/activate
 
-# 3. Install dependencies
-pip install -r requirements.txt
+# 3. Install in development mode
+pip install -e ".[dev]"
 
 # 4. Download FAA data
 ./download-nasr.sh
 
-# 5. Run development server
-python src/main.py
+# 5. Run the server
+navaid-api
 ```
 
 Server runs at `http://localhost:8000`

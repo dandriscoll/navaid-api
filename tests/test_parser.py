@@ -1,5 +1,5 @@
 import pytest
-from src import parser
+from navaid_api import parser
 from pathlib import Path
 
 def test_load_navaids():

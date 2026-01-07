@@ -207,7 +207,9 @@ marimo/_lsp/
 __marimo__/
 
 .claude
+.venv/
 
 # NAVAID data
 data/NAV.txt
 data/FIX.txt
+

@@ -137,6 +137,11 @@ def calculate_destination(
     return round(math.degrees(dest_lat), 6), round(math.degrees(dest_lon), 6)
 
 
-if __name__ == "__main__":
+def run():
+    """CLI entry point for running the server."""
     import uvicorn
     uvicorn.run(app, host=HOST, port=PORT)
+
+
+if __name__ == "__main__":
+    run()

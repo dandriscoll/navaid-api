@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "navaid-api"
+version = "1.0.0"
+description = "REST API for FAA NAVAID and fix coordinates"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "requests"]
+
+[project.scripts]
+navaid-api = "navaid_api.main:run"
+navaid-download = "navaid_api.download_data:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["navaid_api"]
