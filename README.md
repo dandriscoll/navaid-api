@@ -74,7 +74,6 @@ The second format uses ICAO fix notation: `{ID}{RADIAL:3}{DISTANCE:3}` (e.g., `S
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │  /var/lib/navaid-api/NAV.txt   (VORs, TACANs, NDBs)       │  │
 │  │  /var/lib/navaid-api/FIX.txt   (intersections, waypoints) │  │
-│  │  /etc/letsencrypt/live/<domain>/   (SSL certs)            │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -109,7 +108,6 @@ navaid-api/
 
 - Python 3.10+
 - Linux server with systemd
-- Domain name (for Let's Encrypt)
 - Root/sudo access
 
 ## Quick Start (Development)
