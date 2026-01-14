@@ -5,6 +5,7 @@ import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from .config import NAV_PATH, FIX_PATH, HOST, PORT
 from .parser import Navaid, Fix, load_navaids, load_fixes
@@ -34,6 +35,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="NAVAID API", version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
