@@ -1,4 +1,4 @@
-"""Download FAA NASR subscription data (NAV.txt and FIX.txt)."""
+"""Download FAA NASR subscription data (NAV.txt, FIX.txt, and APT.txt)."""
 
 import argparse
 import re
@@ -80,18 +80,23 @@ def download(data_dir: Path | None = None) -> None:
         print("Extracting FIX.txt...")
         fix_path = data_dir / "FIX.txt"
         extract_file_from_zip(tmp_path, "FIX.txt", fix_path)
+
+        print("Extracting APT.txt...")
+        apt_path = data_dir / "APT.txt"
+        extract_file_from_zip(tmp_path, "APT.txt", apt_path)
     finally:
         tmp_path.unlink()
 
     nav_count = count_records(nav_path, "NAV1")
     fix_count = count_records(fix_path, "FIX1")
-    print(f"Done. Extracted {nav_count} NAVAIDs and {fix_count} fixes to {data_dir}/")
+    apt_count = count_records(apt_path, "APT")
+    print(f"Done. Extracted {nav_count} NAVAIDs, {fix_count} fixes, and {apt_count} airports to {data_dir}/")
 
 
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Download FAA NASR subscription data (NAV.txt and FIX.txt)"
+        description="Download FAA NASR subscription data (NAV.txt, FIX.txt, and APT.txt)"
     )
     parser.add_argument(
         "data_dir",

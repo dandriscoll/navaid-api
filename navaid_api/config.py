@@ -5,6 +5,7 @@ from pathlib import Path
 DATA_DIR = Path(os.getenv("NAVAID_DATA_DIR", "data"))
 NAV_PATH = DATA_DIR / "NAV.txt"
 FIX_PATH = DATA_DIR / "FIX.txt"
+APT_PATH = DATA_DIR / "APT.txt"
 
 # Server
 HOST = os.getenv("NAVAID_HOST", "0.0.0.0")

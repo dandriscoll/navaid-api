@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "navaid-api"
-version = "1.0.0"
+version = "2.0.0"
 description = "REST API for FAA NAVAID and fix coordinates"
 readme = "README.md"
 license = "MIT"

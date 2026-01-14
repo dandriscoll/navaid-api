@@ -22,6 +22,18 @@ class Fix:
     longitude: float
 
 
+@dataclass
+class Airport:
+    identifier: str
+    icao: str
+    name: str
+    city: str
+    state: str
+    type: str
+    latitude: float
+    longitude: float
+
+
 def parse_dms(dms_str: str) -> float:
     """Parse DD-MM-SS.SSSH format to decimal degrees."""
     match = re.match(r"(\d+)-(\d+)-([\d.]+)([NSEW])", dms_str.strip())
@@ -119,3 +131,70 @@ def load_fixes(path: Path) -> dict[str, Fix]:
                 continue
 
     return fixes
+
+
+def load_airports(path: Path) -> dict[str, Airport]:
+    """Load APT.txt and return dict of identifier -> Airport.
+
+    Airports are indexed by both their FAA LID (e.g., SEA) and ICAO code (e.g., KSEA).
+    """
+    airports: dict[str, Airport] = {}
+
+    with open(path, "r", encoding="latin-1") as f:
+        for line in f:
+            if len(line) < 1211:
+                continue
+
+            # Only process APT records (landing facility data)
+            record_type = line[0:3].strip()
+            if record_type != "APT":
+                continue
+
+            # Extract fields from fixed-width positions (0-indexed)
+            # Site number: 4-14
+            # Facility type: 15-27 (AIRPORT, HELIPORT, etc.)
+            facility_type = line[14:27].strip()
+
+            # Location identifier (FAA LID): 28-31 (4 chars)
+            identifier = line[27:31].strip()
+
+            # State: 49-50
+            state = line[48:50].strip()
+
+            # City: 94-133
+            city = line[93:133].strip()
+
+            # Facility name: 134-183
+            name = line[133:183].strip()
+
+            # ICAO identifier: 1211-1217 (7 chars)
+            icao = line[1210:1217].strip()
+
+            # Latitude: 539-550 (formatted seconds)
+            # Longitude: 566-577 (formatted seconds)
+            lat_str = line[523:537].strip()
+            lon_str = line[551:565].strip()
+
+            if not identifier or not lat_str or not lon_str:
+                continue
+
+            try:
+                airport = Airport(
+                    identifier=identifier,
+                    icao=icao if icao else identifier,
+                    name=name,
+                    city=city,
+                    state=state,
+                    type=facility_type,
+                    latitude=parse_dms(lat_str),
+                    longitude=parse_dms(lon_str),
+                )
+                # Index by FAA LID
+                airports[identifier] = airport
+                # Also index by ICAO code if different
+                if icao and icao != identifier:
+                    airports[icao] = airport
+            except ValueError:
+                continue
+
+    return airports

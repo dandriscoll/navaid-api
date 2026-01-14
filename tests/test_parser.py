@@ -21,3 +21,14 @@ def test_load_fixes():
         assert all(isinstance(v, parser.Fix) for v in fixes.values())
     else:
         pytest.skip("FIX.txt not found")
+
+
+def test_load_airports():
+    apt_path = Path("data/APT.txt")
+    if apt_path.exists():
+        airports = parser.load_airports(apt_path)
+        assert isinstance(airports, dict)
+        assert all(isinstance(k, str) for k in airports.keys())
+        assert all(isinstance(v, parser.Airport) for v in airports.values())
+    else:
+        pytest.skip("APT.txt not found")
