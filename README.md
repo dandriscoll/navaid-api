@@ -1,9 +1,27 @@
 # NAVAID API Server
 
-A lightweight Python REST API that returns JSON coordinates (latitude/longitude) for FAA NAVAIDs (VORs, NDBs, TACANs) and fixes (intersections, waypoints).
+A lightweight Python REST API that returns JSON coordinates (latitude/longitude) for FAA airports, NAVAIDs (VORs, NDBs, TACANs), and fixes (intersections, waypoints).
 
 ## Examples
 
+Get an airport:
+```
+GET /airports/SEA
+```
+```json
+{
+  "identifier": "SEA",
+  "icao": "KSEA",
+  "name": "SEATTLE-TACOMA INTL",
+  "city": "SEATTLE",
+  "state": "WA",
+  "type": "AIRPORT",
+  "latitude": 47.449,
+  "longitude": -122.309
+}
+```
+
+Get a NAVAID:
 ```
 GET /navaids/SEA
 ```
@@ -17,8 +35,9 @@ GET /navaids/SEA
 }
 ```
 
+Get a waypoint/fix:
 ```
-GET /navaids/BANGR
+GET /waypoints/BANGR
 ```
 ```json
 {
@@ -37,7 +56,8 @@ GET /navaids/SEA270005
 ```
 ```json
 {
-  "navaid": "SEA",
+  "reference": "SEA",
+  "type": "navaid",
   "radial": 270,
   "distance_nm": 5,
   "latitude": 47.435278,
@@ -64,14 +84,15 @@ The second format uses ICAO fix notation: `{ID}{RADIAL:3}{DISTANCE:3}` (e.g., `S
 │  │  │  ┌───────────────────────────────────────────────┐  │  │  │
 │  │  │  │         Python (uvicorn + FastAPI)            │  │  │  │
 │  │  │  │                                               │  │  │  │
-│  │  │  │  - Loads NAV.txt + FIX.txt on startup         │  │  │  │
-│  │  │  │  - Serves JSON via /navaids/<ID>              │  │  │  │
+│  │  │  │  - Loads APT.txt, NAV.txt, FIX.txt on startup │  │  │  │
+│  │  │  │  - Serves JSON via /airports, /navaids, etc.  │  │  │  │
 
 │  │  │  └───────────────────────────────────────────────┘  │  │  │
 │  │  └─────────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────────┐  │
+│  │  /var/lib/navaid-api/APT.txt   (airports)                 │  │
 │  │  /var/lib/navaid-api/NAV.txt   (VORs, TACANs, NDBs)       │  │
 │  │  /var/lib/navaid-api/FIX.txt   (intersections, waypoints) │  │
 │  └───────────────────────────────────────────────────────────┘  │
@@ -82,7 +103,7 @@ The second format uses ICAO fix notation: `{ID}{RADIAL:3}{DISTANCE:3}` (e.g., `S
 
 Data comes from the FAA's 28-Day NASR Subscription:
 - **URL:** http://www.faa.gov/air_traffic/flight_info/aeronav/aero_data/NASR_Subscription/
-- **Files:** `NAV.txt` (~2,600 NAVAIDs) and `FIX.txt` (~70,000 fixes)
+- **Files:** `APT.txt` (~20,000 airports), `NAV.txt` (~2,600 NAVAIDs), and `FIX.txt` (~70,000 fixes)
 - **Update Cycle:** Every 28 days
 
 ## Project Structure
@@ -100,6 +121,7 @@ navaid-api/
 │   ├── parser.py                # NAV.txt/FIX.txt parser
 │   └── config.py                # Configuration
 └── data/
+    ├── APT.txt                  # (downloaded) Airports
     ├── NAV.txt                  # (downloaded) VORs, TACANs, NDBs
     └── FIX.txt                  # (downloaded) Intersections, waypoints
 ```
@@ -154,24 +176,164 @@ Environment variables (set in systemd unit or `.env` file):
 
 | Variable          | Default                  | Description                    |
 |-------------------|--------------------------|--------------------------------|
-| `NAVAID_DATA_DIR` | `data`                   | Directory containing NAV.txt and FIX.txt |
+| `NAVAID_DATA_DIR` | `data`                   | Directory containing APT.txt, NAV.txt, and FIX.txt |
 | `NAVAID_HOST`     | `0.0.0.0`                | Listen address                 |
 | `NAVAID_PORT`     | `8000`                   | Listen port                    |
 
 
 ## API Endpoints
 
+### GET /health
+
+Health check endpoint. Returns the server status and loaded data counts.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "navaid_count": 2600,
+  "fix_count": 70000,
+  "airport_count": 20000
+}
+```
+
+---
+
+### GET /airports/{identifier}
+
+Get airport by FAA LID (e.g., `SEA`) or ICAO code (e.g., `KSEA`).
+
+**Example:** `GET /airports/SEA`
+```json
+{
+  "identifier": "SEA",
+  "icao": "KSEA",
+  "name": "SEATTLE-TACOMA INTL",
+  "city": "SEATTLE",
+  "state": "WA",
+  "type": "AIRPORT",
+  "latitude": 47.449,
+  "longitude": -122.309
+}
+```
+
+### GET /airports/{identifier}/{radial}/{distance}
+
+Calculate a point at a given radial (degrees) and distance (nautical miles) from an airport.
+
+**Example:** `GET /airports/SEA/270/10`
+```json
+{
+  "reference": "SEA",
+  "type": "airport",
+  "radial": 270,
+  "distance_nm": 10,
+  "latitude": 47.449,
+  "longitude": -122.487
+}
+```
+
+---
+
 ### GET /navaids/{identifier}
 
-Returns NAVAID or fix information by identifier. NAVAIDs are checked first.
+Get NAVAID (VOR, VORTAC, TACAN, NDB) by identifier. Also supports ICAO fix notation.
+
+**Example:** `GET /navaids/SEA`
+```json
+{
+  "identifier": "SEA",
+  "name": "SEATTLE",
+  "type": "VORTAC",
+  "latitude": 47.435278,
+  "longitude": -122.309722
+}
+```
+
+**ICAO Fix Notation:** `GET /navaids/SEA270005`
+
+The format is `{ID}{RADIAL:3}{DISTANCE:3}` - e.g., `SEA270005` means SEA radial 270°, 5nm.
 
 ### GET /navaids/{identifier}/{radial}/{distance}
 
-Returns coordinates for a point at a given radial and distance from a NAVAID or fix. Also accepts ICAO fix notation: `/navaids/SEA270005` (3-digit radial + 3-digit distance in nm).
+Calculate a point at a given radial (degrees) and distance (nautical miles) from a NAVAID.
 
-### GET /health
+**Example:** `GET /navaids/SEA/270/5`
+```json
+{
+  "reference": "SEA",
+  "type": "navaid",
+  "radial": 270,
+  "distance_nm": 5,
+  "latitude": 47.435278,
+  "longitude": -122.398611
+}
+```
 
-Returns `{"status": "ok", "navaid_count": N, "fix_count": N}`
+---
+
+### GET /waypoints/{identifier}
+
+Get fix/waypoint (intersection, named waypoint) by identifier.
+
+**Example:** `GET /waypoints/BANGR`
+```json
+{
+  "identifier": "BANGR",
+  "type": "FIX",
+  "state": "WA",
+  "latitude": 47.4625,
+  "longitude": -122.928611
+}
+```
+
+### GET /waypoints/{identifier}/{radial}/{distance}
+
+Calculate a point at a given radial (degrees) and distance (nautical miles) from a waypoint.
+
+**Example:** `GET /waypoints/BANGR/090/10`
+```json
+{
+  "reference": "BANGR",
+  "type": "waypoint",
+  "radial": 90,
+  "distance_nm": 10,
+  "latitude": 47.4625,
+  "longitude": -122.75
+}
+```
+
+---
+
+### GET /points/{identifier}
+
+Search across all types (airports, navaids, waypoints) by identifier. Returns the first match in order: airports → navaids → waypoints. Also supports ICAO fix notation.
+
+**Example:** `GET /points/SEA`
+
+### GET /points/{identifier}/{radial}/{distance}
+
+Calculate a point at a given radial and distance from any reference point (airport, navaid, or waypoint).
+
+**Example:** `GET /points/SEA/180/20`
+
+---
+
+### Error Responses
+
+**404 Not Found:**
+```json
+{
+  "detail": "NAVAID 'XYZ' not found"
+}
+```
+
+**400 Bad Request:**
+```json
+{
+  "detail": "Radial must be 0-360"
+}
+```
 
 
 
@@ -182,7 +344,7 @@ Returns `{"status": "ok", "navaid_count": N, "fix_count": N}`
 
 Check logs with `sudo journalctl -u navaid-api -f`. Common issues:
 
-- **NAV.txt not found:** Run `./download-nasr.sh`
+- **Data files not found (APT.txt, NAV.txt, FIX.txt):** Run `./download-nasr.sh`
 
 
 

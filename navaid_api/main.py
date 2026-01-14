@@ -127,8 +127,8 @@ def get_navaid(identifier: str):
     raise HTTPException(status_code=404, detail=f"NAVAID '{identifier}' not found")
 
 
-@app.get("/all/{identifier}")
-def get_all(identifier: str):
+@app.get("/points/{identifier}")
+def get_point(identifier: str):
     """Search all types (airports, navaids, waypoints) by identifier."""
     identifier = identifier.upper()
 
@@ -200,8 +200,8 @@ def get_navaid_radial(identifier: str, radial: int, distance: float):
     return get_radial_distance(identifier, radial, distance, navaids_only=True)
 
 
-@app.get("/all/{identifier}/{radial}/{distance}")
-def get_all_radial(identifier: str, radial: int, distance: float):
+@app.get("/points/{identifier}/{radial}/{distance}")
+def get_point_radial(identifier: str, radial: int, distance: float):
     """Calculate point at radial/distance from any reference point."""
     identifier = identifier.upper()
     return get_radial_distance(identifier, radial, distance)
