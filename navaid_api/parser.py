@@ -170,10 +170,10 @@ def load_airports(path: Path) -> dict[str, Airport]:
             # ICAO identifier: 1211-1217 (7 chars)
             icao = line[1210:1217].strip()
 
-            # Latitude: 539-550 (formatted seconds)
-            # Longitude: 566-577 (formatted seconds)
+            # Latitude: 523-537 (14 chars, DD-MM-SS.SSSSN)
+            # Longitude: 550-565 (15 chars, DDD-MM-SS.SSSSW)
             lat_str = line[523:537].strip()
-            lon_str = line[551:565].strip()
+            lon_str = line[550:565].strip()
 
             if not identifier or not lat_str or not lon_str:
                 continue
