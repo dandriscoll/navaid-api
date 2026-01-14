@@ -2,21 +2,20 @@
 
 import math
 import re
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 
 from .config import NAV_PATH, FIX_PATH, HOST, PORT
 from .parser import Navaid, Fix, load_navaids, load_fixes
 
-app = FastAPI(title="NAVAID API", version="1.0.0")
-
 # Global databases
 NAVAIDS: dict[str, Navaid] = {}
 FIXES: dict[str, Fix] = {}
 
 
-@app.on_event("startup")
-def startup():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global NAVAIDS, FIXES
 
     if NAV_PATH.exists():
@@ -30,6 +29,11 @@ def startup():
         print(f"Loaded {len(FIXES)} fixes from {FIX_PATH}")
     else:
         print(f"Warning: {FIX_PATH} not found. Run download-nasr.sh first.")
+
+    yield
+
+
+app = FastAPI(title="NAVAID API", version="1.0.0", lifespan=lifespan)
 
 
 @app.get("/health")

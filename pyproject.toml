@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "requests"]
+dev = ["pytest", "requests", "httpx"]
 
 [project.scripts]
 navaid-api = "navaid_api.main:run"
