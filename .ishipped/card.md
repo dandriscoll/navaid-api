@@ -3,6 +3,7 @@ title: "NAVAID API"
 summary: "Get coordinates for any US airport, navaid, or waypoint via REST API."
 shipped: 2026-01-13
 tags: [aviation, api, faa, navigation]
+theme: ocean
 links:
   - label: "Try it"
     url: "https://navaid-api.azurewebsites.net"
