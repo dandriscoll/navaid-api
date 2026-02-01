@@ -2,6 +2,8 @@
 
 A lightweight Python REST API that returns JSON coordinates (latitude/longitude) for FAA airports, NAVAIDs (VORs, NDBs, TACANs), and fixes (intersections, waypoints).
 
+[Try it!](https://navaid-api.azurewebsites.net)
+
 ## Examples
 
 Get an airport:
