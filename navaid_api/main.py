@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 from .config import NAV_PATH, FIX_PATH, APT_PATH, HOST, PORT
 from .parser import Navaid, Fix, Airport, load_navaids, load_fixes, load_airports
@@ -50,6 +51,91 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def landing_page():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NAVAID API</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+         color: #1a1a2e; background: #f0f2f5; line-height: 1.6; }
+  .hero { background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+          color: #fff; padding: 3.5rem 1.5rem 2.5rem; text-align: center; }
+  .hero h1 { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.5px; }
+  .hero p  { margin-top: .5rem; font-size: 1.1rem; opacity: .85; max-width: 600px;
+             margin-left: auto; margin-right: auto; }
+  .container { max-width: 820px; margin: -1.5rem auto 3rem; padding: 0 1.25rem; }
+  .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,.08);
+          padding: 2rem; margin-bottom: 1.25rem; }
+  .card h2 { font-size: 1.15rem; margin-bottom: .75rem; color: #203a43; }
+  .card p, .card li { font-size: .95rem; color: #444; }
+  .card ul { padding-left: 1.25rem; }
+  .card li { margin-bottom: .35rem; }
+  code { background: #eef1f5; padding: .15em .4em; border-radius: 4px; font-size: .88em; }
+  a { color: #2c7be5; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .links { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .links a { display: inline-block; padding: .55rem 1.2rem; border-radius: 6px;
+             background: #2c5364; color: #fff; font-weight: 500; font-size: .9rem; }
+  .links a:hover { background: #203a43; text-decoration: none; }
+  .endpoint { font-family: monospace; background: #eef1f5; padding: .3rem .6rem;
+              border-radius: 4px; display: inline-block; margin: .15rem 0; }
+</style>
+</head>
+<body>
+<div class="hero">
+  <h1>NAVAID API</h1>
+  <p>A lightweight REST API serving FAA airport, NAVAID, and waypoint coordinate data with radial/distance calculations.</p>
+</div>
+<div class="container">
+
+  <div class="card">
+    <h2>Overview</h2>
+    <p>Query U.S. aviation navigation reference points by identifier and optionally compute
+       a destination along a radial and distance (in nautical miles). Data is sourced from
+       the FAA 28-Day NASR Subscription.</p>
+    <ul>
+      <li><span class="endpoint">GET /airports/{id}</span> &mdash; Airport lookup by FAA LID or ICAO code</li>
+      <li><span class="endpoint">GET /navaids/{id}</span> &mdash; VOR / NDB / TACAN lookup (supports ICAO fix notation)</li>
+      <li><span class="endpoint">GET /waypoints/{id}</span> &mdash; Named fix / intersection lookup</li>
+      <li><span class="endpoint">GET /points/{id}</span> &mdash; Unified search across all types</li>
+      <li>Append <code>/{radial}/{distance}</code> to any endpoint above to compute a point along a bearing.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Agent Instructions</h2>
+    <p>If you are an AI agent or tool consuming this API:</p>
+    <ul>
+      <li>All responses are JSON. Coordinates are returned as <code>latitude</code> / <code>longitude</code> in decimal degrees.</li>
+      <li>Identifiers are case-insensitive (e.g. <code>ksea</code> and <code>KSEA</code> are equivalent).</li>
+      <li>Use the <code>/points/{id}</code> endpoint when you don't know the reference type.</li>
+      <li>Radial is a magnetic bearing in degrees (0-360). Distance is in nautical miles.</li>
+      <li>ICAO fix notation is supported on the navaids endpoint, e.g. <code>/navaids/SEA270005</code> = SEA radial 270&deg; at 5 NM.</li>
+      <li>Check <code>/health</code> to verify the service is up and see loaded record counts.</li>
+      <li>Refer to the OpenAPI schema below for full request/response schemas.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Links</h2>
+    <div class="links">
+      <a href="/docs">Swagger UI</a>
+      <a href="/openapi.json">OpenAPI Schema</a>
+      <a href="/redoc">ReDoc</a>
+      <a href="https://github.com/dandriscoll/navaid-api">GitHub</a>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>"""
 
 
 @app.get("/health")
