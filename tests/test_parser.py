@@ -9,6 +9,7 @@ def test_load_navaids():
         assert isinstance(navaids, dict)
         assert all(isinstance(k, str) for k in navaids.keys())
         assert all(isinstance(v, parser.Navaid) for v in navaids.values())
+        assert len(navaids) > 1000
     else:
         pytest.skip("NAV.txt not found")
 
@@ -19,6 +20,7 @@ def test_load_fixes():
         assert isinstance(fixes, dict)
         assert all(isinstance(k, str) for k in fixes.keys())
         assert all(isinstance(v, parser.Fix) for v in fixes.values())
+        assert len(fixes) > 30000
     else:
         pytest.skip("FIX.txt not found")
 
@@ -30,5 +32,6 @@ def test_load_airports():
         assert isinstance(airports, dict)
         assert all(isinstance(k, str) for k in airports.keys())
         assert all(isinstance(v, parser.Airport) for v in airports.values())
+        assert len(airports) > 10000
     else:
         pytest.skip("APT.txt not found")
