@@ -56,8 +56,34 @@ def count_records(file_path: Path, prefix: str) -> int:
     return count
 
 
+FILES_TO_EXTRACT = (
+    ("NAV.txt", "NAV1"),
+    ("FIX.txt", "FIX1"),
+    ("APT.txt", "APT"),
+)
+
+
+def validate_extracted(path: Path, expected_prefix: str) -> None:
+    """Raise RuntimeError if path is empty or its first record does not start with expected_prefix."""
+    if path.stat().st_size == 0:
+        raise RuntimeError(f"{path.name} validation failed: file is empty")
+
+    with open(path, "r", encoding="latin-1") as f:
+        first = f.readline()
+
+    if not first.startswith(expected_prefix):
+        raise RuntimeError(
+            f"{path.name} validation failed: first record does not start with {expected_prefix!r}"
+        )
+
+
 def download(data_dir: Path | None = None) -> None:
-    """Download and extract NASR data files."""
+    """Download and extract NASR data files atomically.
+
+    Stages all three files into a temp dir under data_dir, validates each,
+    and only then os.replace()s them into place. A failure before the rename
+    block leaves the live data dir untouched.
+    """
     if data_dir is None:
         data_dir = DATA_DIR
 
@@ -73,23 +99,27 @@ def download(data_dir: Path | None = None) -> None:
             tmp.write(response.read())
 
     try:
-        print("Extracting NAV.txt...")
-        nav_path = data_dir / "NAV.txt"
-        extract_file_from_zip(tmp_path, "NAV.txt", nav_path)
+        # Stage under data_dir so os.replace stays on the same filesystem.
+        with tempfile.TemporaryDirectory(prefix=".navaid-stage-", dir=data_dir) as stage_str:
+            stage_dir = Path(stage_str)
 
-        print("Extracting FIX.txt...")
-        fix_path = data_dir / "FIX.txt"
-        extract_file_from_zip(tmp_path, "FIX.txt", fix_path)
+            staged: list[tuple[Path, str]] = []
+            for filename, prefix in FILES_TO_EXTRACT:
+                print(f"Extracting {filename}...")
+                staged_path = stage_dir / filename
+                extract_file_from_zip(tmp_path, filename, staged_path)
+                validate_extracted(staged_path, prefix)
+                staged.append((staged_path, filename))
 
-        print("Extracting APT.txt...")
-        apt_path = data_dir / "APT.txt"
-        extract_file_from_zip(tmp_path, "APT.txt", apt_path)
+            print(f"Installing into {data_dir}/...")
+            for staged_path, filename in staged:
+                staged_path.replace(data_dir / filename)
     finally:
         tmp_path.unlink()
 
-    nav_count = count_records(nav_path, "NAV1")
-    fix_count = count_records(fix_path, "FIX1")
-    apt_count = count_records(apt_path, "APT")
+    nav_count = count_records(data_dir / "NAV.txt", "NAV1")
+    fix_count = count_records(data_dir / "FIX.txt", "FIX1")
+    apt_count = count_records(data_dir / "APT.txt", "APT")
     print(f"Done. Extracted {nav_count} NAVAIDs, {fix_count} fixes, and {apt_count} airports to {data_dir}/")
 
 
