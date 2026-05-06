@@ -116,13 +116,12 @@ Data comes from the FAA's 28-Day NASR Subscription:
 navaid-api/
 ├── README.md
 ├── pyproject.toml               # Package configuration
-├── download-nasr.sh             # Download latest FAA data
-├── update-data.sh               # Data update (for cron)
 ├── navaid-api.service           # Example systemd unit file
 ├── navaid_api/
 │   ├── __init__.py
 │   ├── main.py                  # FastAPI application
-│   ├── parser.py                # NAV.txt/FIX.txt parser
+│   ├── parser.py                # NAV.txt/FIX.txt/APT.txt parser
+│   ├── download_data.py         # NASR download CLI (`navaid-download`)
 │   └── config.py                # Configuration
 └── data/
     ├── APT.txt                  # (downloaded) Airports
@@ -159,8 +158,8 @@ source venv/bin/activate
 # 3. Install in development mode
 pip install -e ".[dev]"
 
-# 4. Download FAA data
-./download-nasr.sh
+# 4. Download FAA data (NAV.txt, FIX.txt, APT.txt → ./data/)
+navaid-download
 
 # 5. Run the server
 navaid-api
@@ -172,7 +171,13 @@ Server runs at `http://localhost:8000`
 
 - **systemd:** Copy `systemd/navaid-api.service` to `/etc/systemd/system/` and adjust paths as needed.
 
-- **Data:** Run `./download-nasr.sh` to fetch the latest FAA NASR data.
+- **Data:** Run `navaid-download <data-dir>` (or `python3 -m navaid_api.download_data <data-dir>`) to fetch the latest FAA NASR data. The CLI atomically extracts NAV.txt, FIX.txt, and APT.txt — partial-failure leaves the prior cycle in place.
+
+- **Refresh on schedule:** the FAA NASR cycle rolls every 28 days. One cron line keeps a deployed instance current:
+
+  ```
+  0 3 * * 0 cd /opt/navaid-api && /opt/navaid-api/.venv/bin/navaid-download /var/lib/navaid-api && systemctl restart navaid-api
+  ```
 
 ## Configuration
 
@@ -345,13 +350,13 @@ Calculate a point at a given radial and distance from any reference point (airpo
 
 
 
-- **Data updates:** FAA NASR data updates every 28 days. Run `./update-data.sh` via cron to keep data current.
+- **Data updates:** FAA NASR data updates every 28 days. Run `navaid-download` via cron (see the cron line in **Production Setup** above) to keep data current.
 
 ## Troubleshooting
 
 Check logs with `sudo journalctl -u navaid-api -f`. Common issues:
 
-- **Data files not found (APT.txt, NAV.txt, FIX.txt):** Run `./download-nasr.sh`
+- **Data files not found (APT.txt, NAV.txt, FIX.txt):** Run `navaid-download` (or `python3 -m navaid_api.download_data`)
 
 
 
