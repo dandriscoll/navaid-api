@@ -73,12 +73,15 @@ def setup_test_data():
         ),
     }
 
+    main.EFFECTIVE_DATE = "03/19/2026"
+
     yield
 
     # Clean up
     main.AIRPORTS = {}
     main.NAVAIDS = {}
     main.FIXES = {}
+    main.EFFECTIVE_DATE = None
 
 
 client = TestClient(main.app)
@@ -101,6 +104,17 @@ class TestHealth:
         assert data["navaid_count"] == 2
         assert data["fix_count"] == 2
         assert data["airport_count"] == 3  # SEA, KSEA, PDX
+
+    def test_health_returns_effective_date(self):
+        response = client.get("/health")
+        data = response.json()
+        assert data["effective_date"] == "03/19/2026"
+
+    def test_health_returns_null_effective_date_when_unset(self):
+        main.EFFECTIVE_DATE = None
+        response = client.get("/health")
+        data = response.json()
+        assert data["effective_date"] is None
 
 
 # =============================================================================

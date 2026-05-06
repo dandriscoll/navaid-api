@@ -133,6 +133,28 @@ def load_fixes(path: Path) -> dict[str, Fix]:
     return fixes
 
 
+EFFECTIVE_DATE_RE = re.compile(r"\d{2}/\d{2}/\d{4}")
+
+
+def load_effective_date(path: Path) -> str | None:
+    """Read the FAA NASR effective date (MM/DD/YYYY) from the first APT record.
+
+    The date lives at columns 31-41 of any APT record. Returns None if the
+    first line is not an APT record, is too short, or does not contain a
+    date in the expected format.
+    """
+    with open(path, "r", encoding="latin-1") as f:
+        first = f.readline()
+
+    if not first.startswith("APT") or len(first) < 41:
+        return None
+
+    candidate = first[31:41]
+    if EFFECTIVE_DATE_RE.fullmatch(candidate):
+        return candidate
+    return None
+
+
 def load_airports(path: Path) -> dict[str, Airport]:
     """Load APT.txt and return dict of identifier -> Airport.
 

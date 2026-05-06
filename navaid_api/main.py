@@ -9,17 +9,26 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 from .config import NAV_PATH, FIX_PATH, APT_PATH, HOST, PORT
-from .parser import Navaid, Fix, Airport, load_navaids, load_fixes, load_airports
+from .parser import (
+    Navaid,
+    Fix,
+    Airport,
+    load_navaids,
+    load_fixes,
+    load_airports,
+    load_effective_date,
+)
 
 # Global databases
 NAVAIDS: dict[str, Navaid] = {}
 FIXES: dict[str, Fix] = {}
 AIRPORTS: dict[str, Airport] = {}
+EFFECTIVE_DATE: str | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global NAVAIDS, FIXES, AIRPORTS
+    global NAVAIDS, FIXES, AIRPORTS, EFFECTIVE_DATE
 
     if NAV_PATH.exists():
         NAVAIDS = load_navaids(NAV_PATH)
@@ -36,6 +45,8 @@ async def lifespan(app: FastAPI):
     if APT_PATH.exists():
         AIRPORTS = load_airports(APT_PATH)
         print(f"Loaded {len(AIRPORTS)} airports from {APT_PATH}")
+        EFFECTIVE_DATE = load_effective_date(APT_PATH)
+        print(f"FAA effective date: {EFFECTIVE_DATE or 'unknown'}")
     else:
         print(f"Warning: {APT_PATH} not found. Run navaid-download first.")
 
@@ -145,6 +156,7 @@ def health():
         "navaid_count": len(NAVAIDS),
         "fix_count": len(FIXES),
         "airport_count": len(AIRPORTS),
+        "effective_date": EFFECTIVE_DATE,
     }
 
 

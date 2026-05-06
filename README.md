@@ -187,7 +187,7 @@ Environment variables (set in systemd unit or `.env` file):
 
 ### GET /health
 
-Health check endpoint. Returns the server status and loaded data counts.
+Health check endpoint. Returns the server status, loaded data counts, and the FAA NASR cycle effective date (parsed from the first record of `APT.txt`).
 
 **Response:**
 ```json
@@ -195,9 +195,12 @@ Health check endpoint. Returns the server status and loaded data counts.
   "status": "ok",
   "navaid_count": 2600,
   "fix_count": 70000,
-  "airport_count": 20000
+  "airport_count": 20000,
+  "effective_date": "03/19/2026"
 }
 ```
+
+`effective_date` is `null` if `APT.txt` is missing or its first record cannot be parsed.
 
 ---
 
