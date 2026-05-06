@@ -6,6 +6,8 @@ A lightweight Python REST API that returns JSON coordinates (latitude/longitude)
 
 ## Examples
 
+> *Coordinates and facility types reflect the FAA cycle current at publication; consult the live API for authoritative values.*
+
 Get an airport:
 ```
 GET /airports/SEA
@@ -18,8 +20,8 @@ GET /airports/SEA
   "city": "SEATTLE",
   "state": "WA",
   "type": "AIRPORT",
-  "latitude": 47.449,
-  "longitude": -122.309
+  "latitude": 47.449889,
+  "longitude": -122.311778
 }
 ```
 
@@ -30,10 +32,10 @@ GET /navaids/SEA
 ```json
 {
   "identifier": "SEA",
-  "name": "SEATTLE",
-  "type": "VORTAC",
-  "latitude": 47.435278,
-  "longitude": -122.309722
+  "name": "SEATTLE-TACOMA",
+  "type": "VOT",
+  "latitude": 47.455556,
+  "longitude": -122.301389
 }
 ```
 
@@ -46,12 +48,12 @@ GET /waypoints/BANGR
   "identifier": "BANGR",
   "type": "FIX",
   "state": "WA",
-  "latitude": 47.462500,
-  "longitude": -122.928611
+  "latitude": 47.643903,
+  "longitude": -122.914914
 }
 ```
 
-Get a point 5nm west (270°) of Seattle VOR:
+Get a point 5nm west (270°) of the Seattle VOR:
 ```
 GET /navaids/SEA/270/5
 GET /navaids/SEA270005
@@ -62,8 +64,8 @@ GET /navaids/SEA270005
   "type": "navaid",
   "radial": 270,
   "distance_nm": 5,
-  "latitude": 47.435278,
-  "longitude": -122.398611
+  "latitude": 47.455556,
+  "longitude": -122.424946
 }
 ```
 
@@ -217,8 +219,8 @@ Get airport by FAA LID (e.g., `SEA`) or ICAO code (e.g., `KSEA`).
   "city": "SEATTLE",
   "state": "WA",
   "type": "AIRPORT",
-  "latitude": 47.449,
-  "longitude": -122.309
+  "latitude": 47.449889,
+  "longitude": -122.311778
 }
 ```
 
@@ -233,8 +235,8 @@ Calculate a point at a given radial (degrees) and distance (nautical miles) from
   "type": "airport",
   "radial": 270,
   "distance_nm": 10,
-  "latitude": 47.449,
-  "longitude": -122.487
+  "latitude": 47.449889,
+  "longitude": -122.558112
 }
 ```
 
@@ -248,10 +250,10 @@ Get NAVAID (VOR, VORTAC, TACAN, NDB) by identifier. Also supports ICAO fix notat
 ```json
 {
   "identifier": "SEA",
-  "name": "SEATTLE",
-  "type": "VORTAC",
-  "latitude": 47.435278,
-  "longitude": -122.309722
+  "name": "SEATTLE-TACOMA",
+  "type": "VOT",
+  "latitude": 47.455556,
+  "longitude": -122.301389
 }
 ```
 
@@ -270,8 +272,8 @@ Calculate a point at a given radial (degrees) and distance (nautical miles) from
   "type": "navaid",
   "radial": 270,
   "distance_nm": 5,
-  "latitude": 47.435278,
-  "longitude": -122.398611
+  "latitude": 47.455556,
+  "longitude": -122.424946
 }
 ```
 
@@ -287,8 +289,8 @@ Get fix/waypoint (intersection, named waypoint) by identifier.
   "identifier": "BANGR",
   "type": "FIX",
   "state": "WA",
-  "latitude": 47.4625,
-  "longitude": -122.928611
+  "latitude": 47.643903,
+  "longitude": -122.914914
 }
 ```
 
@@ -303,8 +305,8 @@ Calculate a point at a given radial (degrees) and distance (nautical miles) from
   "type": "waypoint",
   "radial": 90,
   "distance_nm": 10,
-  "latitude": 47.4625,
-  "longitude": -122.75
+  "latitude": 47.643637,
+  "longitude": -122.667705
 }
 ```
 

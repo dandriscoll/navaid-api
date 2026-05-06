@@ -7,34 +7,38 @@ from navaid_api.parser import Airport, Navaid, Fix
 
 @pytest.fixture(autouse=True)
 def setup_test_data():
-    """Set up test data before each test."""
+    """Set up synthetic test data before each test.
+
+    All identifiers are deliberately synthetic so that fixtures do not drift
+    when the FAA decommissions or reclassifies a real-world facility.
+    """
     main.AIRPORTS = {
-        "SEA": Airport(
-            identifier="SEA",
-            icao="KSEA",
-            name="SEATTLE-TACOMA INTL",
-            city="SEATTLE",
-            state="WA",
+        "XYZ": Airport(
+            identifier="XYZ",
+            icao="KXYZ",
+            name="SYNTHETIC INTL",
+            city="SYNTHETICVILLE",
+            state="ZZ",
             type="AIRPORT",
             latitude=47.449,
             longitude=-122.309,
         ),
-        "KSEA": Airport(
-            identifier="SEA",
-            icao="KSEA",
-            name="SEATTLE-TACOMA INTL",
-            city="SEATTLE",
-            state="WA",
+        "KXYZ": Airport(
+            identifier="XYZ",
+            icao="KXYZ",
+            name="SYNTHETIC INTL",
+            city="SYNTHETICVILLE",
+            state="ZZ",
             type="AIRPORT",
             latitude=47.449,
             longitude=-122.309,
         ),
-        "PDX": Airport(
-            identifier="PDX",
-            icao="KPDX",
-            name="PORTLAND INTL",
-            city="PORTLAND",
-            state="OR",
+        "ABC": Airport(
+            identifier="ABC",
+            icao="KABC",
+            name="SECOND SYNTHETIC",
+            city="OTHERTOWN",
+            state="ZZ",
             type="AIRPORT",
             latitude=45.588,
             longitude=-122.598,
@@ -42,16 +46,16 @@ def setup_test_data():
     }
 
     main.NAVAIDS = {
-        "SEA": Navaid(
-            identifier="SEA",
-            name="SEATTLE",
+        "XYZ": Navaid(
+            identifier="XYZ",
+            name="SYNTHETIC NAVAID",
             type="VORTAC",
             latitude=47.435278,
             longitude=-122.309722,
         ),
-        "BTG": Navaid(
-            identifier="BTG",
-            name="BATTLEGROUND",
+        "DEF": Navaid(
+            identifier="DEF",
+            name="SECOND SYNTHETIC NAVAID",
             type="VOR/DME",
             latitude=45.815,
             longitude=-122.563,
@@ -59,15 +63,15 @@ def setup_test_data():
     }
 
     main.FIXES = {
-        "BANGR": Fix(
-            identifier="BANGR",
-            state="WA",
+        "SYNTH": Fix(
+            identifier="SYNTH",
+            state="ZZ",
             latitude=47.4625,
             longitude=-122.928611,
         ),
-        "WAVEY": Fix(
-            identifier="WAVEY",
-            state="WA",
+        "THETA": Fix(
+            identifier="THETA",
+            state="ZZ",
             latitude=47.5,
             longitude=-122.5,
         ),
@@ -103,7 +107,7 @@ class TestHealth:
         data = response.json()
         assert data["navaid_count"] == 2
         assert data["fix_count"] == 2
-        assert data["airport_count"] == 3  # SEA, KSEA, PDX
+        assert data["airport_count"] == 3  # XYZ, KXYZ, ABC
 
     def test_health_returns_effective_date(self):
         response = client.get("/health")
@@ -123,30 +127,30 @@ class TestHealth:
 
 class TestAirports:
     def test_get_airport_by_faa_lid(self):
-        response = client.get("/airports/SEA")
+        response = client.get("/airports/XYZ")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "SEA"
-        assert data["icao"] == "KSEA"
-        assert data["name"] == "SEATTLE-TACOMA INTL"
-        assert data["city"] == "SEATTLE"
-        assert data["state"] == "WA"
+        assert data["identifier"] == "XYZ"
+        assert data["icao"] == "KXYZ"
+        assert data["name"] == "SYNTHETIC INTL"
+        assert data["city"] == "SYNTHETICVILLE"
+        assert data["state"] == "ZZ"
         assert data["type"] == "AIRPORT"
         assert data["latitude"] == 47.449
         assert data["longitude"] == -122.309
 
     def test_get_airport_by_icao(self):
-        response = client.get("/airports/KSEA")
+        response = client.get("/airports/KXYZ")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "SEA"
-        assert data["icao"] == "KSEA"
+        assert data["identifier"] == "XYZ"
+        assert data["icao"] == "KXYZ"
 
     def test_get_airport_case_insensitive(self):
-        response = client.get("/airports/sea")
+        response = client.get("/airports/xyz")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "SEA"
+        assert data["identifier"] == "XYZ"
 
     def test_get_airport_not_found(self):
         response = client.get("/airports/INVALID")
@@ -154,10 +158,10 @@ class TestAirports:
         assert "not found" in response.json()["detail"].lower()
 
     def test_get_airport_radial_distance(self):
-        response = client.get("/airports/SEA/90/10")
+        response = client.get("/airports/XYZ/90/10")
         assert response.status_code == 200
         data = response.json()
-        assert data["reference"] == "SEA"
+        assert data["reference"] == "XYZ"
         assert data["type"] == "airport"
         assert data["radial"] == 90
         assert data["distance_nm"] == 10
@@ -169,13 +173,13 @@ class TestAirports:
         assert response.status_code == 404
 
     def test_get_airport_radial_zero_distance(self):
-        response = client.get("/airports/SEA/0/0")
+        response = client.get("/airports/XYZ/0/0")
         assert response.status_code == 200
         data = response.json()
         assert data["distance_nm"] == 0
 
     def test_get_airport_radial_360(self):
-        response = client.get("/airports/SEA/360/5")
+        response = client.get("/airports/XYZ/360/5")
         assert response.status_code == 200
 
 
@@ -185,20 +189,20 @@ class TestAirports:
 
 class TestNavaids:
     def test_get_navaid(self):
-        response = client.get("/navaids/SEA")
+        response = client.get("/navaids/XYZ")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "SEA"
-        assert data["name"] == "SEATTLE"
+        assert data["identifier"] == "XYZ"
+        assert data["name"] == "SYNTHETIC NAVAID"
         assert data["type"] == "VORTAC"
         assert data["latitude"] == 47.435278
         assert data["longitude"] == -122.309722
 
     def test_get_navaid_case_insensitive(self):
-        response = client.get("/navaids/sea")
+        response = client.get("/navaids/xyz")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "SEA"
+        assert data["identifier"] == "XYZ"
 
     def test_get_navaid_not_found(self):
         response = client.get("/navaids/INVALID")
@@ -206,10 +210,10 @@ class TestNavaids:
         assert "not found" in response.json()["detail"].lower()
 
     def test_get_navaid_radial_distance(self):
-        response = client.get("/navaids/SEA/270/5")
+        response = client.get("/navaids/XYZ/270/5")
         assert response.status_code == 200
         data = response.json()
-        assert data["reference"] == "SEA"
+        assert data["reference"] == "XYZ"
         assert data["type"] == "navaid"
         assert data["radial"] == 270
         assert data["distance_nm"] == 5
@@ -221,17 +225,17 @@ class TestNavaids:
         assert response.status_code == 404
 
     def test_get_navaid_icao_fix_notation(self):
-        """Test ICAO fix notation: SEA270005 = SEA radial 270, 5nm."""
-        response = client.get("/navaids/SEA270005")
+        """Test ICAO fix notation: XYZ270005 = XYZ radial 270, 5nm."""
+        response = client.get("/navaids/XYZ270005")
         assert response.status_code == 200
         data = response.json()
-        assert data["reference"] == "SEA"
+        assert data["reference"] == "XYZ"
         assert data["radial"] == 270
         assert data["distance_nm"] == 5
 
     def test_get_navaid_icao_fix_notation_leading_zeros(self):
-        """Test ICAO notation with leading zeros: SEA090010 = radial 090, 10nm."""
-        response = client.get("/navaids/SEA090010")
+        """Test ICAO notation with leading zeros: XYZ090010 = radial 090, 10nm."""
+        response = client.get("/navaids/XYZ090010")
         assert response.status_code == 200
         data = response.json()
         assert data["radial"] == 90
@@ -248,20 +252,20 @@ class TestNavaids:
 
 class TestWaypoints:
     def test_get_waypoint(self):
-        response = client.get("/waypoints/BANGR")
+        response = client.get("/waypoints/SYNTH")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "BANGR"
+        assert data["identifier"] == "SYNTH"
         assert data["type"] == "FIX"
-        assert data["state"] == "WA"
+        assert data["state"] == "ZZ"
         assert data["latitude"] == 47.4625
         assert data["longitude"] == -122.928611
 
     def test_get_waypoint_case_insensitive(self):
-        response = client.get("/waypoints/bangr")
+        response = client.get("/waypoints/synth")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "BANGR"
+        assert data["identifier"] == "SYNTH"
 
     def test_get_waypoint_not_found(self):
         response = client.get("/waypoints/INVALID")
@@ -269,10 +273,10 @@ class TestWaypoints:
         assert "not found" in response.json()["detail"].lower()
 
     def test_get_waypoint_radial_distance(self):
-        response = client.get("/waypoints/BANGR/180/15")
+        response = client.get("/waypoints/SYNTH/180/15")
         assert response.status_code == 200
         data = response.json()
-        assert data["reference"] == "BANGR"
+        assert data["reference"] == "SYNTH"
         assert data["type"] == "waypoint"
         assert data["radial"] == 180
         assert data["distance_nm"] == 15
@@ -289,32 +293,32 @@ class TestWaypoints:
 class TestPoints:
     def test_get_point_finds_airport(self):
         """Points endpoint should find airports first."""
-        response = client.get("/points/PDX")
+        response = client.get("/points/ABC")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "PDX"
+        assert data["identifier"] == "ABC"
         assert data["type"] == "AIRPORT"
 
     def test_get_point_finds_navaid(self):
         """Points endpoint should find navaids."""
-        response = client.get("/points/BTG")
+        response = client.get("/points/DEF")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "BTG"
+        assert data["identifier"] == "DEF"
         assert data["type"] == "VOR/DME"
 
     def test_get_point_finds_waypoint(self):
         """Points endpoint should find waypoints."""
-        response = client.get("/points/BANGR")
+        response = client.get("/points/SYNTH")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "BANGR"
+        assert data["identifier"] == "SYNTH"
         assert data["type"] == "FIX"
 
     def test_get_point_priority_airport_over_navaid(self):
         """When ID exists in both airports and navaids, airport wins."""
-        # SEA exists in both AIRPORTS and NAVAIDS
-        response = client.get("/points/SEA")
+        # XYZ exists in both AIRPORTS and NAVAIDS
+        response = client.get("/points/XYZ")
         assert response.status_code == 200
         data = response.json()
         # Should return airport data (has icao field)
@@ -322,10 +326,10 @@ class TestPoints:
         assert data["type"] == "AIRPORT"
 
     def test_get_point_case_insensitive(self):
-        response = client.get("/points/bangr")
+        response = client.get("/points/synth")
         assert response.status_code == 200
         data = response.json()
-        assert data["identifier"] == "BANGR"
+        assert data["identifier"] == "SYNTH"
 
     def test_get_point_not_found(self):
         response = client.get("/points/INVALID")
@@ -334,33 +338,33 @@ class TestPoints:
 
     def test_get_point_icao_fix_notation(self):
         """Points endpoint should support ICAO fix notation."""
-        response = client.get("/points/SEA270005")
+        response = client.get("/points/XYZ270005")
         assert response.status_code == 200
         data = response.json()
         assert data["radial"] == 270
         assert data["distance_nm"] == 5
 
     def test_get_point_radial_distance_from_airport(self):
-        response = client.get("/points/PDX/45/20")
+        response = client.get("/points/ABC/45/20")
         assert response.status_code == 200
         data = response.json()
-        assert data["reference"] == "PDX"
+        assert data["reference"] == "ABC"
         assert data["type"] == "airport"
         assert data["radial"] == 45
         assert data["distance_nm"] == 20
 
     def test_get_point_radial_distance_from_navaid(self):
-        response = client.get("/points/BTG/180/10")
+        response = client.get("/points/DEF/180/10")
         assert response.status_code == 200
         data = response.json()
-        assert data["reference"] == "BTG"
+        assert data["reference"] == "DEF"
         assert data["type"] == "navaid"
 
     def test_get_point_radial_distance_from_waypoint(self):
-        response = client.get("/points/WAVEY/90/5")
+        response = client.get("/points/THETA/90/5")
         assert response.status_code == 200
         data = response.json()
-        assert data["reference"] == "WAVEY"
+        assert data["reference"] == "THETA"
         assert data["type"] == "waypoint"
 
     def test_get_point_radial_distance_not_found(self):
@@ -374,48 +378,48 @@ class TestPoints:
 
 class TestRadialDistanceValidation:
     def test_radial_negative_invalid(self):
-        response = client.get("/navaids/SEA/-1/5")
+        response = client.get("/navaids/XYZ/-1/5")
         assert response.status_code == 400
         assert "radial" in response.json()["detail"].lower()
 
     def test_radial_over_360_invalid(self):
-        response = client.get("/navaids/SEA/361/5")
+        response = client.get("/navaids/XYZ/361/5")
         assert response.status_code == 400
         assert "radial" in response.json()["detail"].lower()
 
     def test_distance_negative_invalid(self):
-        response = client.get("/navaids/SEA/90/-5")
+        response = client.get("/navaids/XYZ/90/-5")
         assert response.status_code == 400
         assert "distance" in response.json()["detail"].lower()
 
     def test_radial_boundary_zero(self):
-        response = client.get("/navaids/SEA/0/5")
+        response = client.get("/navaids/XYZ/0/5")
         assert response.status_code == 200
 
     def test_radial_boundary_360(self):
-        response = client.get("/navaids/SEA/360/5")
+        response = client.get("/navaids/XYZ/360/5")
         assert response.status_code == 200
 
     def test_distance_zero_valid(self):
-        response = client.get("/navaids/SEA/90/0")
+        response = client.get("/navaids/XYZ/90/0")
         assert response.status_code == 200
 
     def test_distance_decimal_valid(self):
-        response = client.get("/navaids/SEA/90/5.5")
+        response = client.get("/navaids/XYZ/90/5.5")
         assert response.status_code == 200
         data = response.json()
         assert data["distance_nm"] == 5.5
 
     def test_validation_on_airports(self):
-        response = client.get("/airports/SEA/400/5")
+        response = client.get("/airports/XYZ/400/5")
         assert response.status_code == 400
 
     def test_validation_on_waypoints(self):
-        response = client.get("/waypoints/BANGR/400/5")
+        response = client.get("/waypoints/SYNTH/400/5")
         assert response.status_code == 400
 
     def test_validation_on_points(self):
-        response = client.get("/points/SEA/400/5")
+        response = client.get("/points/XYZ/400/5")
         assert response.status_code == 400
 
 
@@ -426,7 +430,7 @@ class TestRadialDistanceValidation:
 class TestDestinationCalculation:
     def test_north_increases_latitude(self):
         """Moving north (0/360) should increase latitude."""
-        response = client.get("/navaids/SEA/0/60")
+        response = client.get("/navaids/XYZ/0/60")
         assert response.status_code == 200
         data = response.json()
         # 60nm north should increase lat by ~1 degree
@@ -434,28 +438,28 @@ class TestDestinationCalculation:
 
     def test_south_decreases_latitude(self):
         """Moving south (180) should decrease latitude."""
-        response = client.get("/navaids/SEA/180/60")
+        response = client.get("/navaids/XYZ/180/60")
         assert response.status_code == 200
         data = response.json()
         assert data["latitude"] < 47.435278
 
     def test_east_increases_longitude(self):
         """Moving east (90) should increase longitude (less negative)."""
-        response = client.get("/navaids/SEA/90/60")
+        response = client.get("/navaids/XYZ/90/60")
         assert response.status_code == 200
         data = response.json()
         assert data["longitude"] > -122.309722
 
     def test_west_decreases_longitude(self):
         """Moving west (270) should decrease longitude (more negative)."""
-        response = client.get("/navaids/SEA/270/60")
+        response = client.get("/navaids/XYZ/270/60")
         assert response.status_code == 200
         data = response.json()
         assert data["longitude"] < -122.309722
 
     def test_zero_distance_returns_same_coords(self):
         """Zero distance should return the reference point coords."""
-        response = client.get("/navaids/SEA/90/0")
+        response = client.get("/navaids/XYZ/90/0")
         assert response.status_code == 200
         data = response.json()
         assert data["latitude"] == 47.435278
