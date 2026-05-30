@@ -213,3 +213,5 @@ __marimo__/
 data/NAV.txt
 data/FIX.txt
 data/APT.txt
+# Local agent/tooling state — never commit
+.devbox/
