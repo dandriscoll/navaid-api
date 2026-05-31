@@ -3,8 +3,9 @@
 import math
 import re
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
@@ -18,6 +19,15 @@ from .parser import (
     load_airports,
     load_effective_date,
 )
+
+# Path-parameter type for facility identifiers. Constrains every identifier the
+# API accepts to a short alphanumeric token, rejecting over-long or malformed
+# input at the framework boundary (before it is uppercased and used as a dict
+# key). Defined once and shared by every route so the constraint cannot drift
+# between handlers. max_length=16 comfortably covers FAA LIDs/ICAO codes and the
+# combined radial notation (e.g. XYZ270005); the pattern allows lowercase since
+# handlers uppercase before lookup.
+IdentifierParam = Annotated[str, Path(max_length=16, pattern=r"^[A-Za-z0-9]+$")]
 
 # Global databases
 NAVAIDS: dict[str, Navaid] = {}
@@ -161,7 +171,7 @@ def health():
 
 
 @app.get("/airports/{identifier}")
-def get_airport(identifier: str):
+def get_airport(identifier: IdentifierParam):
     """Get airport by FAA LID (e.g., SEA) or ICAO code (e.g., KSEA)."""
     identifier = identifier.upper()
 
@@ -182,7 +192,7 @@ def get_airport(identifier: str):
 
 
 @app.get("/waypoints/{identifier}")
-def get_waypoint(identifier: str):
+def get_waypoint(identifier: IdentifierParam):
     """Get fix/waypoint by identifier."""
     identifier = identifier.upper()
 
@@ -200,7 +210,7 @@ def get_waypoint(identifier: str):
 
 
 @app.get("/navaids/{identifier}")
-def get_navaid(identifier: str):
+def get_navaid(identifier: IdentifierParam):
     """Get NAVAID (VOR, TACAN, NDB) by identifier."""
     identifier = identifier.upper()
 
@@ -226,7 +236,7 @@ def get_navaid(identifier: str):
 
 
 @app.get("/points/{identifier}")
-def get_point(identifier: str):
+def get_point(identifier: IdentifierParam):
     """Search all types (airports, navaids, waypoints) by identifier."""
     identifier = identifier.upper()
 
@@ -278,28 +288,28 @@ def get_point(identifier: str):
 
 
 @app.get("/airports/{identifier}/{radial}/{distance}")
-def get_airport_radial(identifier: str, radial: int, distance: float):
+def get_airport_radial(identifier: IdentifierParam, radial: int, distance: float):
     """Calculate point at radial/distance from an airport."""
     identifier = identifier.upper()
     return get_radial_distance(identifier, radial, distance, airports_only=True)
 
 
 @app.get("/waypoints/{identifier}/{radial}/{distance}")
-def get_waypoint_radial(identifier: str, radial: int, distance: float):
+def get_waypoint_radial(identifier: IdentifierParam, radial: int, distance: float):
     """Calculate point at radial/distance from a waypoint."""
     identifier = identifier.upper()
     return get_radial_distance(identifier, radial, distance, waypoints_only=True)
 
 
 @app.get("/navaids/{identifier}/{radial}/{distance}")
-def get_navaid_radial(identifier: str, radial: int, distance: float):
+def get_navaid_radial(identifier: IdentifierParam, radial: int, distance: float):
     """Calculate point at radial/distance from a NAVAID."""
     identifier = identifier.upper()
     return get_radial_distance(identifier, radial, distance, navaids_only=True)
 
 
 @app.get("/points/{identifier}/{radial}/{distance}")
-def get_point_radial(identifier: str, radial: int, distance: float):
+def get_point_radial(identifier: IdentifierParam, radial: int, distance: float):
     """Calculate point at radial/distance from any reference point."""
     identifier = identifier.upper()
     return get_radial_distance(identifier, radial, distance)

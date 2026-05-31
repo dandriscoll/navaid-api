@@ -464,3 +464,63 @@ class TestDestinationCalculation:
         data = response.json()
         assert data["latitude"] == 47.435278
         assert data["longitude"] == -122.309722
+
+
+class TestIdentifierValidation:
+    """SEC NA-002: path identifiers are length- and charset-constrained.
+
+    Every identifier route is bound to ``IdentifierParam`` (max_length=16,
+    pattern ^[A-Za-z0-9]+$) in main.py, so malformed identifiers are rejected
+    with 422 at the framework boundary before being uppercased and used as a
+    dict key. These tests guard that mechanism: reverting any handler to a bare
+    ``str`` makes the rejected cases reach the handler and return 404/200
+    instead of 422, turning the relevant test red.
+    """
+
+    # Every route that accepts an identifier, in both single and radial forms.
+    SINGLE_ROUTES = ("/airports/{id}", "/waypoints/{id}", "/navaids/{id}", "/points/{id}")
+    RADIAL_ROUTES = (
+        "/airports/{id}/90/5",
+        "/waypoints/{id}/90/5",
+        "/navaids/{id}/90/5",
+        "/points/{id}/90/5",
+    )
+
+    def test_overlong_identifier_rejected_on_every_single_route(self):
+        too_long = "A" * 17
+        for route in self.SINGLE_ROUTES:
+            response = client.get(route.format(id=too_long))
+            assert response.status_code == 422, f"{route} accepted a 17-char identifier"
+
+    def test_overlong_identifier_rejected_on_every_radial_route(self):
+        too_long = "A" * 17
+        for route in self.RADIAL_ROUTES:
+            response = client.get(route.format(id=too_long))
+            assert response.status_code == 422, f"{route} accepted a 17-char identifier"
+
+    def test_non_alphanumeric_identifier_rejected_on_every_single_route(self):
+        for bad in ("A-B", "A.B", "A_B", "A B"):
+            for route in self.SINGLE_ROUTES:
+                response = client.get(route.format(id=bad))
+                assert response.status_code == 422, f"{route} accepted {bad!r}"
+
+    def test_non_alphanumeric_identifier_rejected_on_every_radial_route(self):
+        for bad in ("A-B", "A.B", "A_B"):
+            for route in self.RADIAL_ROUTES:
+                response = client.get(route.format(id=bad))
+                assert response.status_code == 422, f"{route} accepted {bad!r}"
+
+    def test_max_length_boundary_is_accepted(self):
+        """A 16-char alphanumeric identifier passes validation (reaches the
+        handler and 404s because it is not in the synthetic dataset) — proving
+        the limit is 16, not shorter."""
+        sixteen = "A" * 16
+        for route in self.SINGLE_ROUTES:
+            response = client.get(route.format(id=sixteen))
+            assert response.status_code == 404, f"{route} rejected a valid 16-char identifier"
+
+    def test_valid_identifiers_still_resolve(self):
+        """Lowercase and combined radial notation remain valid under the
+        constraint (regression guard for the charset/length allowing them)."""
+        assert client.get("/airports/xyz").status_code == 200
+        assert client.get("/navaids/XYZ270005").status_code == 200

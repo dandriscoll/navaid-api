@@ -16,7 +16,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "requests", "httpx"]
+# starlette's TestClient (loaded via fastapi.testclient) requires httpx2; plain
+# httpx is deprecated upstream and on a removal trajectory. Pin httpx2 so a fresh
+# install takes the supported path and the suite runs without the deprecation.
+dev = ["pytest", "requests", "httpx2>=2.0.0"]
 
 [project.scripts]
 navaid-api = "navaid_api.main:run"
